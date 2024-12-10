@@ -8,7 +8,7 @@ class UserCreate(BaseModel):
     location: str
     skills: str
     availability: str = "available"
-    bio: str = None
+    bio: str = ""
 
 class UserLogin(BaseModel):
     email: EmailStr
