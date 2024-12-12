@@ -10,6 +10,9 @@ from crud import is_project_owner,update_project
 from crud import create_collaboration_request,is_user_active,is_project_public,get_incoming_requests,get_outgoing_requests
 from crud import update_collaboration_request_status,is_request_target_or_owner
 from crud import create_resource,get_resources,create_resource_request,get_resource_requests
+from crud import get_ongoing_projects
+from crud import get_ongoing_collaborations
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") #OAuth2PasswordBearer is a class that provides a dependency for handling OAuth2 password flow. 
 
@@ -364,13 +367,20 @@ def list_resource(
 @app.get("/resources")
 def browse_resources(
     resource_type: str = Query(None, description="Filter by resource type"),
+    resource_name: str = Query(None, description="Filter by resource name"),
+    owner_name: str = Query(None, description="Filter by owner name"),
     db=Depends(get_db),
     current_user=Depends(get_current_user_from_token),
 ):
     """
-    Browse available resources with an optional filter for type.
+    Browse available resources with optional filters for type, resource name, and owner name.
     """
-    resources = get_resources(db, resource_type=resource_type)
+    resources = get_resources(
+        db,
+        resource_type=resource_type,
+        resource_name=resource_name,
+        owner_name=owner_name,
+    )
     return [
         {
             "resource_id": resource["resource_id"],
@@ -380,6 +390,7 @@ def browse_resources(
         }
         for resource in resources
     ]
+
 
 @app.post("/resource-requests")
 def request_resource_access(
@@ -415,4 +426,103 @@ def view_resource_requests(
             "status": request["status"]
         }
         for request in requests
+    ]
+
+
+@app.get("/dashboard")
+def get_dashboard(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token),
+):
+    """
+    Fetch data for the user's dashboard, including incoming requests, outgoing requests, and project overview.
+    """
+    # Fetch incoming collaboration requests
+    incoming_collab_requests = get_incoming_requests(db, current_user["id"])
+    outgoing_collab_requests = get_outgoing_requests(db, current_user["id"])
+    incoming_resource_requests = get_resource_requests(db, current_user["id"], incoming=True)
+    outgoing_resource_requests = get_resource_requests(db, current_user["id"], incoming=False)
+    ongoing_projects = get_ongoing_projects(db, current_user["id"])
+
+    return {
+        "incoming_requests": {
+            "collaborations": [
+                {
+                    "request_id": r["request_id"],
+                    "from_user": r["from_user"],
+                    "target_type": r["target_type"],
+                    "target_name": r["target_name"],
+                    "status": r["status"]
+                }
+                for r in incoming_collab_requests
+            ],
+            "resources": [
+                {
+                    "request_id": r["request_id"],
+                    "resource_name": r["resource_name"],
+                    "requester_name": r["requester_name"],
+                    "status": r["status"]
+                }
+                for r in incoming_resource_requests
+            ]
+        },
+        "outgoing_requests": {
+            "collaborations": [
+                {
+                    "request_id": r["request_id"],
+                    "target_type": r["target_type"],
+                    "target_name": r["target_name"],
+                    "status": r["status"]
+                }
+                for r in outgoing_collab_requests
+            ],
+            "resources": [
+                {
+                    "request_id": r["request_id"],
+                    "resource_name": r["resource_name"],
+                    "requester_name": r["requester_name"],
+                    "status": r["status"]
+                }
+                for r in outgoing_resource_requests
+            ]
+        },
+        "ongoing_projects": [
+            {
+                "project_id": p["project_id"],
+                "title": p["title"],
+                "description": p["description"],
+                "skills_required": p["skills_required"],
+                "owner_name": p["owner_name"],
+                "owner_email": p["owner_email"]
+            }
+            for p in ongoing_projects
+        ]
+    }
+
+@app.get("/collaborations")
+def view_ongoing_collaborations(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token),
+):
+    """
+    View all active collaborations for the current user.
+    Includes both projects where user is a collaborator and projects they own with collaborators.
+    """
+    collaborations = get_ongoing_collaborations(db, current_user["id"])
+    return [
+        {
+            "collaboration_id": collab["collaboration_id"],
+            "project": {
+                "id": collab["project_id"],
+                "title": collab["project_title"],
+                "owner_name": collab["project_owner_name"],
+                "owner_email": collab["project_owner_email"]
+            },
+            "collaborator": {
+                "name": collab["collaborator_name"],
+                "email": collab["collaborator_email"],
+                "role": collab["role"]
+            }
+        }
+        for collab in collaborations
     ]

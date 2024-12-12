@@ -223,6 +223,61 @@ def is_project_owner(db, project_id: int, user_id: int) -> bool:
     return project and project["owner_id"] == user_id
 
 
+def get_ongoing_projects(db, user_id: int):
+    """
+    Fetch all projects where the user is either the owner or an accepted collaborator.
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+    SELECT
+        p.id AS project_id,
+        p.title,
+        p.description,
+        p.skills_required,
+        u.name AS owner_name,
+        u.email AS owner_email
+    FROM projects p
+    JOIN users u ON p.owner_id = u.id
+    WHERE p.owner_id = ? OR p.id IN (
+        SELECT c.project_id FROM collaborations c WHERE c.user_id = ? AND c.status = 'accepted'
+    )
+    """, (user_id, user_id))
+    return cursor.fetchall()
+
+def get_ongoing_collaborations(db, user_id: int):
+    """
+    Fetch all active collaborations where the user is either the owner or collaborator.
+    Handles cases where project_id can be a user_id (if < 10000) or a project_id (if >= 10000).
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+    SELECT DISTINCT
+        c.id AS collaboration_id,
+        CASE 
+            WHEN c.project_id < 10000 THEN NULL 
+            ELSE p.id 
+        END AS project_id,
+        CASE 
+            WHEN c.project_id < 10000 THEN NULL 
+            ELSE p.title 
+        END AS project_title,
+        u.name AS collaborator_name,
+        u.email AS collaborator_email,
+        c.role,
+        po.name AS project_owner_name,
+        po.email AS project_owner_email
+    FROM collaborations c
+    LEFT JOIN projects p ON c.project_id = p.id AND c.project_id >= 10000
+    JOIN users u ON c.user_id = u.id
+    LEFT JOIN users po ON p.owner_id = po.id
+    WHERE (
+        (c.project_id < 10000 AND c.project_id = ?) -- Direct user collaboration requests
+        OR (p.owner_id = ? AND c.project_id >= 10000) -- Collaborations on owned projects
+    )
+    AND c.status = 'accepted'
+    """, (user_id, user_id))
+    
+    return cursor.fetchall()
 
 
 #Collaborations
@@ -367,9 +422,9 @@ def create_resource(db, owner_id: int, resource_data):
     return cursor.lastrowid
 
 
-def get_resources(db, resource_type=None):
+def get_resources(db, resource_type=None, resource_name=None, owner_name=None):
     """
-    Fetch resources from the database with an optional filter for type.
+    Fetch resources from the database with optional filters for type, resource name, and owner name.
     """
     query = """
     SELECT
@@ -382,16 +437,27 @@ def get_resources(db, resource_type=None):
     """
     params = []
 
-    # Apply filter for resource type
-    if resource_type:
-        query += "WHERE r.resource_type = ? "
-        params.append(resource_type)
 
-    query += "ORDER BY r.created_at DESC"  # Sort by most recently created
+    conditions = []
+    if resource_type:
+        conditions.append("r.resource_type = ?")
+        params.append(resource_type)
+    if resource_name:
+        conditions.append("r.name LIKE ?")
+        params.append(f"%{resource_name}%")
+    if owner_name:
+        conditions.append("u.name LIKE ?")
+        params.append(f"%{owner_name}%")
+
+    if conditions:
+        query += "WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY r.created_at DESC"
 
     cursor = db.cursor()
     cursor.execute(query, params)
     return cursor.fetchall()
+
 
 
 def create_resource_request(db, resource_id: int, requester_id: int):
