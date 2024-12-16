@@ -37,7 +37,7 @@ export default function Navbar() {
 					Collaborations
 				</Link>
 				<Link
-					href="#"
+					href="/resources"
 					className="text- transition-colors hover:text-foreground"
 				>
 					Resources
@@ -74,12 +74,6 @@ export default function Navbar() {
 						<Link href="#" className="text- hover:text-foreground">
 							Products
 						</Link>
-						<Link href="#" className="text- hover:text-foreground">
-							Customers
-						</Link>
-						<Link href="#" className="text- hover:text-foreground">
-							Analytics
-						</Link>
 					</nav>
 				</SheetContent>
 			</Sheet>
@@ -110,7 +104,7 @@ export default function Navbar() {
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem>
-							<Link href="/login">Logout</Link>
+							<Link href="/auth">Logout</Link>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>

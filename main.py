@@ -12,11 +12,26 @@ from crud import update_collaboration_request_status,is_request_target_or_owner
 from crud import create_resource,get_resources,create_resource_request,get_resource_requests
 from crud import get_ongoing_projects
 from crud import get_ongoing_collaborations
-
+from fastapi.middleware.cors import CORSMiddleware
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") 
 
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
 
 @app.post("/register")
 def register_user(user: UserCreate, db=Depends(get_db)):
@@ -526,3 +541,14 @@ def view_ongoing_collaborations(
         }
         for collab in collaborations
     ]
+
+
+@app.get("/test")
+def test_route():
+    """
+    Simple test endpoint to verify CORS configuration.
+    """
+    return {"message": "Bentley"}
+
+
+#TODO: Add endpoint to view accessed resources 

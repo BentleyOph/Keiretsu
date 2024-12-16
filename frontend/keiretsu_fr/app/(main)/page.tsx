@@ -4,6 +4,7 @@ import {
 	ArrowUpRight,
 	CreditCard,
 	DollarSign,
+	User,
 	Users,
 } from "lucide-react";
 
@@ -26,7 +27,14 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 
+
+
+//my imports
 import { TypographyH1 } from "@/components/TypographyH1";
+import UserDisplay from "@/components/UserDisplay";
+
+
+
 
 export const description =
 	"An application shell with a header and main content area. The header has a navbar, a search input and and a user nav dropdown. The user nav is toggled by a button with an avatar image.";
@@ -36,7 +44,7 @@ export default function Dashboard() {
 		<div className="flex min-h-screen w-full flex-col">
 			<main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
 				<div className="grid gap-4 md:grid-cols-4 md:gap-8 lg:grid-cols-4">
-					<TypographyH1 text={`Welcome,  Bentley`}></TypographyH1>
+					<UserDisplay />
 					<Card x-chunk="dashboard-01-chunk-3" className="col-start-3">
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 							<CardTitle className="text-sm font-medium">
