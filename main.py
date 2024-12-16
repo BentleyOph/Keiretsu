@@ -14,7 +14,7 @@ from crud import get_ongoing_projects
 from crud import get_ongoing_collaborations
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") #OAuth2PasswordBearer is a class that provides a dependency for handling OAuth2 password flow. 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") 
 
 app = FastAPI()
 
