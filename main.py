@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends,Query
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
-from schemas import UserCreate,UserLogin,ProjectCreate,ProjectUpdate,CollaborationRequestCreate,CollaborationRequestUpdate,ResourceCreate,ResourceRequestCreate
+from schemas import UserCreate,UserLogin,ProjectCreate,ProjectUpdate,CollaborationRequestCreate,CollaborationRequestUpdate,ResourceCreate,ResourceRequestCreate,ResourceRequestUpdate
 from database import get_db
 from crud import create_user, get_user_by_email,verify_password,get_user_by_id
 from crud import create_access_token,decode_access_token
@@ -12,6 +12,7 @@ from crud import update_collaboration_request_status,is_request_target_or_owner
 from crud import create_resource,get_resources,create_resource_request,get_resource_requests
 from crud import get_ongoing_projects
 from crud import get_ongoing_collaborations
+from crud import get_user_details,update_resource_request_status
 from fastapi.middleware.cors import CORSMiddleware
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") 
@@ -438,10 +439,12 @@ def view_resource_requests(
             "request_id": request["request_id"],
             "resource_name": request["resource_name"],
             "requester_name": request["requester_name"],
+            "requester_id": request["user_id"],
             "status": request["status"]
         }
         for request in requests
     ]
+
 
 
 @app.get("/dashboard")
@@ -542,13 +545,176 @@ def view_ongoing_collaborations(
         for collab in collaborations
     ]
 
-
-@app.get("/test")
-def test_route():
+@app.get("/user/{user_id}")
+def get_user(
+    user_id: int,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token)
+):
     """
-    Simple test endpoint to verify CORS configuration.
+    Get detailed information about a specific user.
     """
-    return {"message": "Bentley"}
+    user = get_user_details(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return user
 
 
-#TODO: Add endpoint to view accessed resources 
+
+
+@app.get("/resources/owned")
+def get_owned_resources(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token)
+):
+    """
+    Fetch all resources owned by the authenticated user.
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+    SELECT id AS resource_id, name, description, resource_type, created_at
+    FROM resources
+    WHERE owner_id = ?
+    """, (current_user["id"],))
+    resources = cursor.fetchall()
+
+    return [
+        {
+            "resource_id": r["resource_id"],
+            "name": r["name"],
+            "description": r["description"],
+            "resource_type": r["resource_type"],
+            "created_at": r["created_at"]
+        }
+        for r in resources
+    ]
+
+
+@app.get("/resources/shared")
+def get_shared_resources(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token)
+):
+    """
+    Fetch all resources shared with the authenticated user.
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+    SELECT id AS resource_id, name, description, resource_type, owner_id, created_at
+    FROM resources
+    WHERE shared_with LIKE ?
+    """, (f"%{current_user['id']}%",))
+    resources = cursor.fetchall()
+
+    return [
+        {
+            "resource_id": r["resource_id"],
+            "name": r["name"],
+            "description": r["description"],
+            "resource_type": r["resource_type"],
+            "owner_id": r["owner_id"],
+            "created_at": r["created_at"]
+        }
+        for r in resources
+    ]
+
+@app.get("/resources/incoming")
+def get_incoming_resource_requests(
+        db=Depends(get_db),
+        current_user=Depends(get_current_user_from_token)
+    ):
+        """
+        Fetch all incoming resource requests for resources owned by the authenticated user.
+        """
+        requests = get_resource_requests(db, current_user["id"], incoming=True)
+        return [
+            {
+                "request_id": r["request_id"],
+                "resource_name": r["resource_name"], 
+                "requester_name": r["requester_name"],
+                "requester_id": r["user_id"],
+                "status": r["status"]
+            }
+            for r in requests
+        ]
+
+@app.get("/resources/outgoing") 
+def get_outgoing_resource_requests(
+        db=Depends(get_db),
+        current_user=Depends(get_current_user_from_token)
+    ):
+        """
+        Fetch all outgoing resource requests made by the authenticated user.
+        """
+        requests = get_resource_requests(db, current_user["id"], incoming=False)
+        return [
+            {
+                "request_id": r["request_id"],
+                "resource_name": r["resource_name"],
+                "requester_name": r["requester_name"], 
+                "requester_id": r["user_id"],
+                "status": r["status"]
+            }
+            for r in requests
+        ]
+
+
+@app.patch("/resource-requests/{request_id}")
+def update_resource_request(
+    request_id: int,
+    request_data: ResourceRequestUpdate,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token)
+):
+    """
+    Accept or deny a resource access request.
+    Only the resource owner can update the request status.
+    """
+    try:
+        rows_updated = update_resource_request_status(db, request_id, request_data.status)
+        if rows_updated == 0:
+            raise HTTPException(status_code=404, detail="Request not found")
+        return {"message": f"Resource request {request_data.status}", "status": request_data.status}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+
+@app.get("/collab-requests/incoming")
+def view_incoming_collaboration_requests(
+        db=Depends(get_db),
+        current_user=Depends(get_current_user_from_token),
+    ):
+        """
+        View all incoming collaboration requests for the current user.
+        """
+        requests = get_incoming_requests(db, current_user["id"])
+        return [
+            {
+                "request_id": r["request_id"],
+                "from_user": r["from_user"],
+                "target_type": r["target_type"], 
+                "target_name": r["target_name"],
+                "status": r["status"]
+            }
+            for r in requests
+        ]
+
+@app.get("/collab-requests/outgoing")
+def view_outgoing_collaboration_requests(
+        db=Depends(get_db),
+        current_user=Depends(get_current_user_from_token),
+    ):
+        """
+        View all outgoing collaboration requests from the current user.
+        """
+        requests = get_outgoing_requests(db, current_user["id"])
+        return [
+            {
+                "request_id": r["request_id"],
+                "target_type": r["target_type"],
+                "target_name": r["target_name"],
+                "status": r["status"]
+            }
+            for r in requests
+        ]

@@ -31,3 +31,8 @@ export async function login(email, password) {
 		throw error;
 	}
 }
+
+export async function logout() {
+    const cookiesInstance = cookies();
+    cookiesInstance.delete("Authorization");
+}

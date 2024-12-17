@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -12,8 +14,24 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { logout } from "@/api/login";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Navbar() {
+	const router = useRouter();
+
+	const handleLogout = async () => {
+		try {
+			await logout();
+			toast.success('Logged out successfully');
+			router.push('/auth');
+			router.refresh();
+		} catch (error) {
+			toast.error('Failed to logout');
+		}
+	};
+
 	return (
 		<header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
 			<nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
@@ -50,10 +68,10 @@ export default function Navbar() {
 				</Link>
 				
 				<Link
-					href="#"
+					href="/projects"
 					className="text- transition-colors hover:text-foreground"
 				>
-					Workspace
+					Projects
 				</Link>
 			</nav>
 			<Sheet>
@@ -109,8 +127,8 @@ export default function Navbar() {
 							<Link href="/me">Settings</Link>
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem>
-							<Link href="/auth">Logout</Link>
+						<DropdownMenuItem onClick={handleLogout}>
+							Logout
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>

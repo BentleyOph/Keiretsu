@@ -80,6 +80,25 @@ def get_filtered_users(db, skills=None, location=None, availability=None):
     cursor.execute(query, params) 
     return cursor.fetchall()
 
+def get_user_details(db: Connection, user_id: int):
+    """
+    Fetch detailed user information by user ID.
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+    SELECT 
+        id AS user_id,
+        name,
+        email,
+        type,
+        location,
+        skills,
+        availability,
+        bio
+    FROM users 
+    WHERE id = ?
+    """, (user_id,))
+    return cursor.fetchone()
 
 
 
@@ -243,10 +262,9 @@ def get_ongoing_projects(db, user_id: int):
     )
     """, (user_id, user_id))
     return cursor.fetchall()
-
 def get_ongoing_collaborations(db, user_id: int):
     """
-    Fetch all active collaborations where the user is either the owner or collaborator.
+    Fetch all active collaborations where the user is either the owner, requester, or collaborator.
     Handles cases where project_id can be a user_id (if < 10000) or a project_id (if >= 10000).
     """
     cursor = db.cursor()
@@ -273,11 +291,13 @@ def get_ongoing_collaborations(db, user_id: int):
     WHERE (
         (c.project_id < 10000 AND c.project_id = ?) -- Direct user collaboration requests
         OR (p.owner_id = ? AND c.project_id >= 10000) -- Collaborations on owned projects
+        OR (c.user_id = ?) -- Collaborations where the user is the requester
     )
     AND c.status = 'accepted'
-    """, (user_id, user_id))
+    """, (user_id, user_id, user_id))
     
     return cursor.fetchall()
+
 
 
 #Collaborations
@@ -380,7 +400,7 @@ def get_outgoing_requests(db, user_id: int):
         for row in rows
     ]
 
-def update_collaboration_request_status(db, request_id: int, status: str):
+def update_collaboration_request_status(db, request_id: int, status: str ):
     """
     Update the status of a collaboration request.
     """
@@ -466,8 +486,8 @@ def create_resource_request(db, resource_id: int, requester_id: int):
     """
     cursor = db.cursor()
 
-    # Check if the resource exists
-    cursor.execute("SELECT owner_id FROM resources WHERE id = ?", (resource_id,))
+    # Check if the resource exists and get owner and sharing info
+    cursor.execute("SELECT owner_id, shared_with FROM resources WHERE id = ?", (resource_id,))
     resource = cursor.fetchone()
     if not resource:
         raise ValueError("Resource not found")
@@ -475,6 +495,13 @@ def create_resource_request(db, resource_id: int, requester_id: int):
     # Ensure the requester is not the owner
     if resource["owner_id"] == requester_id:
         raise ValueError("You cannot request access to your own resource")
+
+    # Check if resource is already shared with requester
+    shared_with = resource["shared_with"]
+    if shared_with:
+        shared_users = [int(id) for id in shared_with.split(',')]
+        if requester_id in shared_users:
+            raise ValueError("This resource is already shared with you")
 
     # Insert the access request
     cursor.execute("""
@@ -495,6 +522,7 @@ def get_resource_requests(db, user_id: int, incoming: bool):
     SELECT
         rr.id AS request_id,
         r.name AS resource_name,
+        u.id AS user_id,
         u.name AS requester_name,
         rr.status
     FROM resource_requests rr
@@ -509,7 +537,6 @@ def get_resource_requests(db, user_id: int, incoming: bool):
     cursor = db.cursor()
     cursor.execute(query, (user_id,))
     return cursor.fetchall()
-
 
 
 
@@ -568,3 +595,44 @@ def generate_unique_project_id(db):
         cursor.execute("SELECT 1 FROM projects WHERE id = ?", (random_id,))
         if not cursor.fetchone():
             return random_id
+        
+
+
+
+def update_resource_request_status(db, request_id: int, status: str):
+    """
+    Update resource request status and handle sharing permissions if accepted.
+    """
+    cursor = db.cursor()
+    
+    # First get the request details to find resource_id and requester_id
+    cursor.execute("""
+        SELECT resource_id, requester_id 
+        FROM resource_requests 
+        WHERE id = ?
+    """, (request_id,))
+    request = cursor.fetchone()
+    
+    if not request:
+        raise ValueError("Request not found")
+        
+    # Update request status
+    cursor.execute("""
+        UPDATE resource_requests 
+        SET status = ? 
+        WHERE id = ?
+    """, (status, request_id))
+    
+    # If accepted, add requester to shared_with
+    if status == "accepted":
+        cursor.execute("""
+            UPDATE resources
+            SET shared_with = CASE 
+                WHEN shared_with IS NULL THEN ?
+                ELSE shared_with || ',' || ?
+            END
+            WHERE id = ?
+        """, (str(request["requester_id"]), str(request["requester_id"]), request["resource_id"]))
+    
+    db.commit()
+    return cursor.rowcount

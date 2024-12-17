@@ -58,3 +58,6 @@ class ResourceCreate(BaseModel):
     description: str = Field(None, description="Brief description of the resource")
 class ResourceRequestCreate(BaseModel):
     resource_id: int = Field(..., description="ID of the resource being requested")
+
+class ResourceRequestUpdate(BaseModel):
+    status: str  # "accepted" or "denied"

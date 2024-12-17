@@ -21,68 +21,179 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { registerUser } from '@/api/auth';
+import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 const formSchema = z.object({
-  name: z.string().min(1, {
-    message: 'Name is required',
+  email: z.string().min(1, 'Email is required').email('Invalid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  name: z.string().min(1, 'Name is required'),
+  type: z.enum(['freelancer', 'company', 'individual'], {
+    required_error: 'Please select a user type',
   }),
-  email: z
-    .string()
-    .min(1, {
-      message: 'Email is required',
-    })
-    .email({
-      message: 'Please enter a valid email',
-    }),
-  password: z.string().min(1, {
-    message: 'Password is required',
+  location: z.string().min(1, 'Location is required'),
+  skills: z.string().min(1, 'Skills are required'),
+  availability: z.enum(['available', 'unavailable'], {
+    required_error: 'Please select availability',
   }),
-  confirmPassword: z.string().min(1, {
-    message: 'Confirm Password is required',
-  }),
+  bio: z.string().min(10, 'Bio must be at least 10 characters'),
 });
 
-const RegisterForm = () => {
+export default function RegisterForm() {
   const router = useRouter();
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
       email: '',
       password: '',
-      confirmPassword: '',
+      name: '',
+      type: 'freelancer',
+      location: '',
+      skills: '',
+      availability: 'available',
+      bio: '',
     },
   });
 
-  const handleSubmit = (data: z.infer<typeof formSchema>) => {
-    router.push('/');
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      await registerUser(values);
+      toast.success('Registration successful! Please login.');
+      router.push('/auth');
+    } catch (error) {
+      toast.error(error.message || 'Registration failed');
+    }
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Register</CardTitle>
-        <CardDescription>Sign up by adding the info below</CardDescription>
+        <CardDescription>Create your account</CardDescription>
       </CardHeader>
-      <CardContent className='space-y-2'>
+      <CardContent>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className='space-y-6'
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name='name'
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='uppercase text-xs font-bold text-zinc-500 dark:text-white'>
-                    Name
-                  </FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input
-                      className='bg-slate-100 dark:bg-slate-500 border-0 focus-visible:ring-0 text-black dark:text-white focus-visible: ring-offset-0'
-                      placeholder='Enter Name'
+                    <Input placeholder="example@email.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select user type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="freelancer">Freelancer</SelectItem>
+                      <SelectItem value="company">Company</SelectItem>
+                      <SelectItem value="individual">Individual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="skills"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Skills</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Python, AI, Project Management" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="availability"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Availability</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select availability" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="unavailable">Unavailable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Tell us about yourself"
+                      className="min-h-[100px]"
                       {...field}
                     />
                   </FormControl>
@@ -90,74 +201,12 @@ const RegisterForm = () => {
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name='email'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className='uppercase text-xs font-bold text-zinc-500 dark:text-white'>
-                    Email
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      className='bg-slate-100 dark:bg-slate-500 border-0 focus-visible:ring-0 text-black dark:text-white focus-visible: ring-offset-0'
-                      placeholder='Enter Email'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='password'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className='uppercase text-xs font-bold text-zinc-500 dark:text-white'>
-                    Password
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type='password'
-                      className='bg-slate-100 dark:bg-slate-500 border-0 focus-visible:ring-0 text-black dark:text-white focus-visible: ring-offset-0'
-                      placeholder='Enter Password'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='confirmPassword'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className='uppercase text-xs font-bold text-zinc-500 dark:text-white'>
-                    Confirm Password
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type='confirmPassword'
-                      className='bg-slate-100 dark:bg-slate-500 border-0 focus-visible:ring-0 text-black dark:text-white focus-visible: ring-offset-0'
-                      placeholder='Enter Confirm Password'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button className='w-full'>Sign In</Button>
+            <Button type="submit" className="w-full">
+              Register
+            </Button>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
-};
-
-export default RegisterForm;
+}

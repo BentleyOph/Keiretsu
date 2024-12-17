@@ -58,7 +58,11 @@ const LoginForm = () => {
         
         if (response.message === 'Login successful') {  
             toast.success('Logged in successfully');
-            router.push('/');
+            // Add a small delay to ensure cookie is set
+            setTimeout(() => {
+                router.push('/');
+                router.refresh(); // Force a refresh to ensure new state is picked up
+            }, 100);
         } else {
             throw new Error('Login failed');
         }
