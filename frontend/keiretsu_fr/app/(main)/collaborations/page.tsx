@@ -1,7 +1,7 @@
-import DataTableDemo from "@/components/ui/data-table";
+import DataTable from "@/components/ui/data-table";
 
 export default function Orders() {
     return (
-        <DataTableDemo />
+        <DataTable />
     );  
 }

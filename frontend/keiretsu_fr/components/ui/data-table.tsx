@@ -36,56 +36,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { getCollabs } from '@/api/all_collabs'
 
-const data: Payment[] = [
-  {
-    id: 'm5gr84i9',
-    amount: 316,
-    status: 'success',
-    email: 'ken99@yahoo.com',
-  },
-  {
-    id: '3u1reuv4',
-    amount: 242,
-    status: 'success',
-    email: 'Abe45@gmail.com',
-  },
-  {
-    id: 'derv1ws0',
-    amount: 837,
-    status: 'processing',
-    email: 'Monserrat44@gmail.com',
-  },
-  {
-    id: '5kma53ae',
-    amount: 874,
-    status: 'success',
-    email: 'Silas22@gmail.com',
-  },
-  {
-    id: 'bhqecj4p',
-    amount: 721,
-    status: 'failed',
-    email: 'carmella@hotmail.com',
-  },
-]
-
-export type Payment = {
-  id: string
-  amount: number
-  status: 'pending' | 'processing' | 'success' | 'failed'
-  email: string
+export type Collaboration = {
+  collaboration_id: number
+  project: {
+    id: number | null
+    title: string | null
+    owner_name: string | null
+    owner_email: string | null
+  }
+  collaborator: {
+    name: string
+    email: string
+    role: string
+  }
 }
 
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<Collaboration>[] = [
   {
     id: 'select',
     header: ({ table }) => (
       <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
+        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
@@ -101,47 +74,34 @@ export const columns: ColumnDef<Payment>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue('status')}</div>
+    accessorFn: (row) => row.collaborator.name,
+    id: 'name',
+    header: ({ column }) => (
+      <Button variant="noShadow" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+        Name
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
     ),
   },
   {
-    accessorKey: 'email',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="noShadow"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Email
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div className="lowercase">{row.getValue('email')}</div>,
+    accessorFn: (row) => row.collaborator.email,
+    id: 'email',
+    header: 'Email',
   },
   {
-    accessorKey: 'amount',
-    header: () => <div className="text-right">Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue('amount'))
-
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-      }).format(amount)
-
-      return <div className="text-right font-base">{formatted}</div>
-    },
+    accessorFn: (row) => row.collaborator.role,
+    id: 'role',
+    header: 'Role',
+    cell: ({ row }) => (
+      <div className="capitalize">
+        {row.original.collaborator.role}
+      </div>
+    ),
   },
   {
     id: 'actions',
-    enableHiding: false,
     cell: ({ row }) => {
-      const payment = row.original
+      const collab = row.original
 
       return (
         <DropdownMenu>
@@ -153,14 +113,12 @@ export const columns: ColumnDef<Payment>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
-            >
-              Copy payment ID
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(collab.collaboration_id.toString())}>
+              Copy collaboration ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <DropdownMenuItem>View collaborator</DropdownMenuItem>
+            <DropdownMenuItem>View project details</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -168,7 +126,9 @@ export const columns: ColumnDef<Payment>[] = [
   },
 ]
 
-export default function DataTableDemo() {
+export default function DataTable() {
+  const [data, setData] = React.useState<Collaboration[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -176,6 +136,20 @@ export default function DataTableDemo() {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+
+  React.useEffect(() => {
+    async function fetchData() {
+      try {
+        const collabs = await getCollabs()
+        setData(collabs)
+      } catch (error) {
+        console.error('Failed to fetch collaborations:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const table = useReactTable({
     data,
@@ -196,14 +170,18 @@ export default function DataTableDemo() {
     },
   })
 
+  if (loading) {
+    return <div>Loading collaborations...</div>
+  }
+
   return (
-    <div className="grid font-base text-text ml-40 mr-40 mt-10 ">
+    <div className="grid font-base text-text ml-40 mr-40 mt-10">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter emails..."
-          value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
+          placeholder="Filter by name..."
+          value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
           onChange={(event) =>
-            table.getColumn('email')?.setFilterValue(event.target.value)
+            table.getColumn('name')?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

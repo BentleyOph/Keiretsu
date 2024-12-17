@@ -43,6 +43,13 @@ export default function Navbar() {
 					Resources
 				</Link>
 				<Link
+					href="/requests"
+					className="text- transition-colors hover:text-foreground"
+				>
+					Requests
+				</Link>
+				
+				<Link
 					href="#"
 					className="text- transition-colors hover:text-foreground"
 				>
@@ -65,29 +72,28 @@ export default function Navbar() {
 							<Package2 className="h-6 w-6" />
 							<span className="sr-only">Acme Inc</span>
 						</Link>
-						<Link href="#" className="hover:text-foreground">
+						<Link href="/" className="hover:text-foreground">
 							Dashboard
 						</Link>
 						<Link href="/collaborations" className="text- hover:text-foreground">
 							Collaborators
 						</Link>
-						<Link href="#" className="text- hover:text-foreground">
-							Products
+						<Link href="/resources" className="text- hover:text-foreground">
+							Resources
+						</Link>
+						<Link href="/requests" className="text- hover:text-foreground">
+							Requests
 						</Link>
 					</nav>
 				</SheetContent>
 			</Sheet>
 			<div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-				<form className="ml-auto flex-1 sm:flex-initial">
-					<div className="relative">
-						<Search className="text- absolute left-2.5 top-2.5 h-4 w-4" />
-						<Input
-							type="search"
-							placeholder="Search..."
-							className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
-						/>
-					</div>
-				</form>
+				<Button asChild className="ml-auto flex-1 sm:flex-initial">
+					<Link href="/search" className="gap-2 items-center inline-flex">
+						<Search className="h-4 w-4" />
+						Look for collaborators
+					</Link>
+				</Button>
 				<ModeToggle />
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>

@@ -1,14 +1,27 @@
 "use server";
+import { getToken } from './getToken';
 
 
 export async function getUsername() {
   try {
-    // this would fetch from fastapi server
-    const response = await fetch("http://localhost:8000/test");
+    const token = await getToken();
+
+    const response = await fetch("http://localhost:8000/me", {
+      headers: {
+        'Authorization': `${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user data');
+    }
+
     const data = await response.json();
-    return { username : data.message, error: null };
+    console.log('Data from getUsername:', data);
+    return { username : data.name, error: null }
   } catch (error) {
-    return { username: null, error: "Failed to fetch username" };
+    console.error('Error fetching user:', error);
+    return { user: null, error: "Failed to fetch user data" };
   }
 }
 

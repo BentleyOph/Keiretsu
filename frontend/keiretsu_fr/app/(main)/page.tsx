@@ -2,9 +2,6 @@ import Link from "next/link";
 import {
 	Activity,
 	ArrowUpRight,
-	CreditCard,
-	DollarSign,
-	User,
 	Users,
 } from "lucide-react";
 
@@ -30,16 +27,29 @@ import {
 
 
 //my imports
-import { TypographyH1 } from "@/components/TypographyH1";
 import UserDisplay from "@/components/UserDisplay";
+import { getCollabs } from "@/api/all_collabs";
+import { getOwnedResources, getSharedResources } from "@/api/resources";
 
-
-
+interface Resource {
+    resource_id: number;
+    name: string;
+    description: string;
+    resource_type: string;
+    created_at: string;
+}
 
 export const description =
 	"An application shell with a header and main content area. The header has a navbar, a search input and and a user nav dropdown. The user nav is toggled by a button with an avatar image.";
 
-export default function Dashboard() {
+export default async function Dashboard() {
+	const collaborations = await getCollabs();
+    const ownedResources = await getOwnedResources();
+    const sharedResources = await getSharedResources();
+    const allResources = [...ownedResources, ...sharedResources].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    ).slice(0, 5); // Get only the 5 most recent resources
+
 	return (
 		<div className="flex min-h-screen w-full flex-col">
 			<main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -78,7 +88,7 @@ export default function Dashboard() {
 								<CardDescription>Recent collaborations.</CardDescription>
 							</div>
 							<Button asChild size="sm" className="ml-auto gap-1">
-								<Link href="#">
+								<Link href="/collaborations">
 									View All
 									<ArrowUpRight className="h-4 w-4" />
 								</Link>
@@ -89,121 +99,24 @@ export default function Dashboard() {
 								<TableHeader>
 									<TableRow>
 										<TableHead className="text-lg text-black">Name</TableHead>
-										<TableHead className="hidden xl:table-column">
-											Type
-										</TableHead>
-										<TableHead className="hidden xl:table-column">
-											Status
-										</TableHead>
-										<TableHead className="hidden xl:table-column">
-											Date
-										</TableHead>
-										<TableHead className="text-right text-lg text-text">
-											Type
-										</TableHead>
+										<TableHead className="hidden xl:table-column">Email</TableHead>
+										<TableHead className="text-right text-lg text-text">Type</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									<TableRow>
-										<TableCell>
-											<div className="font-medium">Liam Johnson</div>
-											<div className="text- hidden text-sm md:inline">
-												liam@example.com
-											</div>
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											Sale
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											<Badge className="text-xs" variant="outline">
-												Approved
-											</Badge>
-										</TableCell>
-										<TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-											2023-06-23
-										</TableCell>
-										<TableCell className="text-right">project</TableCell>
-									</TableRow>
-									<TableRow>
-										<TableCell>
-											<div className="font-medium">Olivia Smith</div>
-											<div className="text- hidden text-sm md:inline">
-												olivia@example.com
-											</div>
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											Refund
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											<Badge className="text-xs" variant="outline">
-												Declined
-											</Badge>
-										</TableCell>
-										<TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-											2023-06-24
-										</TableCell>
-										<TableCell className="text-right">collaborator</TableCell>
-									</TableRow>
-									<TableRow>
-										<TableCell>
-											<div className="font-medium">Noah Williams</div>
-											<div className="text- hidden text-sm md:inline">
-												noah@example.com
-											</div>
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											Subscription
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											<Badge className="text-xs" variant="outline">
-												Approved
-											</Badge>
-										</TableCell>
-										<TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-											2023-06-25
-										</TableCell>
-										<TableCell className="text-right">project</TableCell>
-									</TableRow>
-									<TableRow>
-										<TableCell>
-											<div className="font-medium">Emma Brown</div>
-											<div className="text- hidden text-sm md:inline">
-												emma@example.com
-											</div>
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											Sale
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											<Badge className="text-xs" variant="outline">
-												Approved
-											</Badge>
-										</TableCell>
-										<TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-											2023-06-26
-										</TableCell>
-										<TableCell className="text-right">collaborator</TableCell>
-									</TableRow>
-									<TableRow>
-										<TableCell>
-											<div className="font-medium">Liam Johnson</div>
-											<div className="text- hidden text-sm md:inline">
-												liam@example.com
-											</div>
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											Sale
-										</TableCell>
-										<TableCell className="hidden xl:table-column">
-											<Badge className="text-xs" variant="outline">
-												Approved
-											</Badge>
-										</TableCell>
-										<TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-											2023-06-27
-										</TableCell>
-										<TableCell className="text-right">project</TableCell>
-									</TableRow>
+									{collaborations.map((collab) => (
+										<TableRow key={collab.collaboration_id}>
+											<TableCell>
+												<div className="font-medium">{collab.collaborator.name}</div>
+											</TableCell>
+											<TableCell className="hidden xl:table-cell">
+												{collab.collaborator.email}
+											</TableCell>
+											<TableCell className="text-right">
+												{collab.collaborator.role}
+											</TableCell>
+										</TableRow>
+									))}
 								</TableBody>
 							</Table>
 						</CardContent>
@@ -212,84 +125,38 @@ export default function Dashboard() {
 						<CardHeader className="flex flex-row items-center">
 							<div className="grid gap-2">
 								<CardTitle>Resources</CardTitle>
-								<CardDescription>Accessed resources.</CardDescription>
+								<CardDescription>Owned resources</CardDescription>
 							</div>
-
 							<Button asChild size="sm" className="ml-auto gap-1">
-								<Link href="#">
-									View All
+								<Link href="/resources">
+									View More
 									<ArrowUpRight className="h-4 w-4" />
 								</Link>
 							</Button>
 						</CardHeader>
 
-						<CardContent className="grid gap-8">
-							<div className="flex items-center gap-4">
-								<Avatar className="hidden h-9 w-9 sm:flex">
-									<AvatarImage src="/avatars/01.png" alt="Avatar" />
-									<AvatarFallback>OM</AvatarFallback>
-								</Avatar>
-								<div className="grid gap-1">
-									<p className="text-sm font-medium leading-none">
-										Olivia Martin
-									</p>
-									<p className="text- text-sm">olivia.martin@email.com</p>
-								</div>
-								<div className="ml-auto font-medium">$1,999.00</div>
-							</div>
-							<div className="flex items-center gap-4">
-								<Avatar className="hidden h-9 w-9 sm:flex">
-									<AvatarImage src="/avatars/02.png" alt="Avatar" />
-									<AvatarFallback>JL</AvatarFallback>
-								</Avatar>
-								<div className="grid gap-1">
-									<p className="text-sm font-medium leading-none">
-										Jackson Lee
-									</p>
-									<p className="text- text-sm">jackson.lee@email.com</p>
-								</div>
-								<div className="ml-auto font-medium">$39.00</div>
-							</div>
-							<div className="flex items-center gap-4">
-								<Avatar className="hidden h-9 w-9 sm:flex">
-									<AvatarImage src="/avatars/03.png" alt="Avatar" />
-									<AvatarFallback>IN</AvatarFallback>
-								</Avatar>
-								<div className="grid gap-1">
-									<p className="text-sm font-medium leading-none">
-										Isabella Nguyen
-									</p>
-									<p className="text- text-sm">isabella.nguyen@email.com</p>
-								</div>
-								<div className="ml-auto font-medium">$299.00</div>
-							</div>
-							<div className="flex items-center gap-4">
-								<Avatar className="hidden h-9 w-9 sm:flex">
-									<AvatarImage src="/avatars/04.png" alt="Avatar" />
-									<AvatarFallback>WK</AvatarFallback>
-								</Avatar>
-								<div className="grid gap-1">
-									<p className="text-sm font-medium leading-none">
-										William Kim
-									</p>
-									<p className="text- text-sm">will@email.com</p>
-								</div>
-								<div className="ml-auto font-medium">$99.00</div>
-							</div>
-							<div className="flex items-center gap-4">
-								<Avatar className="hidden h-9 w-9 sm:flex">
-									<AvatarImage src="/avatars/05.png" alt="Avatar" />
-									<AvatarFallback>SD</AvatarFallback>
-								</Avatar>
-								<div className="grid gap-1">
-									<p className="text-sm font-medium leading-none">
-										Sofia Davis
-									</p>
-									<p className="text- text-sm">sofia.davis@email.com</p>
-								</div>
-								<div className="ml-auto font-medium">$39.00</div>
-							</div>
-						</CardContent>
+						<CardContent className="grid gap-6">
+                            {allResources.map((resource) => (
+                                <div key={resource.resource_id} className="flex items-center gap-4">
+                                    <Avatar className="hidden h-9 w-9 sm:flex">
+                                        <AvatarFallback>
+                                            {resource.name.charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="grid gap-1">
+                                        <p className="text-sm font-medium leading-none">
+                                            {resource.name}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {resource.description}
+                                        </p>
+                                    </div>
+                                    <Badge className="ml-auto" variant="outline">
+                                        {resource.resource_type}
+                                    </Badge>
+                                </div>
+                            ))}
+                        </CardContent>
 					</Card>
 				</div>
 			</main>
