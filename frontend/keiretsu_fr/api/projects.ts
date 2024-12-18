@@ -43,6 +43,22 @@ export async function getProjectDetails(projectId: number) {
     }
 }
 
+export async function getProjectByCollaboration(collaborationId: number) {
+    const token = await getToken();
+    try {
+        const response = await fetch(`http://localhost:8000/collaborations/${collaborationId}/project`, {
+            headers: {
+                'Authorization': `${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch project details');
+        return response.json();
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        throw error;
+    }
+}
+
 export async function sendProjectCollaborationRequest(projectId: number) {
     const token = await getToken();
     try {

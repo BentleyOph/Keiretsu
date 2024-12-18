@@ -427,6 +427,43 @@ def is_request_target_or_owner(db, request_id: int, user_id: int):
     return cursor.fetchone() is not None
 
 
+def get_project_by_collaboration_id(db, collaboration_id: int):
+    """
+    Fetch project details associated with a collaboration ID.
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT 
+            p.id as project_id,
+            p.title,
+            p.description,
+            p.skills_required,
+            p.is_open,
+            u.name as owner_name,
+            u.email as owner_email,
+            c.role as collaboration_role,
+            c.status as collaboration_status
+        FROM collaborations c
+        JOIN projects p ON c.project_id = p.id
+        JOIN users u ON p.owner_id = u.id
+        WHERE c.id = ?
+    """, (collaboration_id,))
+    
+    result = cursor.fetchone()
+    if not result:
+        return None
+        
+    return {
+        "project_id": result["project_id"],
+        "title": result["title"],
+        "description": result["description"],
+        "skills_required": result["skills_required"],
+        "is_open": result["is_open"],
+        "owner": {
+            "name": result["owner_name"],
+            "email": result["owner_email"]
+        }
+    }
 
 #Resources 
 def create_resource(db, owner_id: int, resource_data):

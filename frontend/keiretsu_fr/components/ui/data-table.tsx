@@ -13,6 +13,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table'
 import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import * as React from 'react'
 
@@ -102,6 +103,7 @@ export const columns: ColumnDef<Collaboration>[] = [
     id: 'actions',
     cell: ({ row }) => {
       const collab = row.original
+      const router = useRouter()
 
       return (
         <DropdownMenu>
@@ -118,7 +120,9 @@ export const columns: ColumnDef<Collaboration>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>View collaborator</DropdownMenuItem>
-            <DropdownMenuItem>View project details</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push(`/projects/collab/${collab.collaboration_id}`)}>
+              View project details
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
