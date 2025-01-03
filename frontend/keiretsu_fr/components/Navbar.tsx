@@ -73,6 +73,13 @@ export default function Navbar() {
 				>
 					Projects
 				</Link>
+				<Link
+					href="https://miro.com/app/"
+					className="text- transition-colors hover:text-foreground"
+				>
+					Workspaces
+				</Link>
+				
 			</nav>
 			<Sheet>
 				<SheetTrigger asChild>

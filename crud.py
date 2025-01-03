@@ -465,6 +465,46 @@ def get_project_by_collaboration_id(db, collaboration_id: int):
         }
     }
 
+def get_user_from_collaboration_id(db, collaboration_id: int):
+    """
+    Fetch user details associated with a collaboration ID.
+    Returns details of the collaborator (not the project owner).
+    """
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT 
+            u.id as user_id,
+            u.name,
+            u.email,
+            u.type,
+            u.location,
+            u.skills,
+            u.availability,
+            u.bio,
+            c.role as collaboration_role,
+            c.status as collaboration_status
+        FROM collaborations c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.id = ?
+    """, (collaboration_id,))
+    
+    result = cursor.fetchone()
+    if not result:
+        return None
+        
+    return {
+        "user_id": result["user_id"],
+        "name": result["name"],
+        "email": result["email"],
+        "type": result["type"],
+        "location": result["location"],
+        "skills": result["skills"],
+        "availability": result["availability"],
+        "bio": result["bio"],
+        "collaboration_role": result["collaboration_role"],
+        "collaboration_status": result["collaboration_status"]
+    }
+
 #Resources 
 def create_resource(db, owner_id: int, resource_data):
     """

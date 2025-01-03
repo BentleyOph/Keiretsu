@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import FlickeringGrid from "@/components/ui/flickering-grid";
 
+
 const mainLayout = ({ children }: { children: React.ReactNode }) => {
     return (
         <div className="relative min-h-screen">
@@ -15,6 +16,7 @@ const mainLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
             <div className="relative z-10">
                 <Navbar />
+                
                 {children}
             </div>
         </div>

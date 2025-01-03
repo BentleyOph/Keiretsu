@@ -13,7 +13,7 @@ from crud import create_resource,get_resources,create_resource_request,get_resou
 from crud import get_ongoing_projects
 from crud import get_ongoing_collaborations
 from crud import get_user_details,update_resource_request_status
-from crud import get_project_by_collaboration_id
+from crud import get_project_by_collaboration_id,get_user_from_collaboration_id
 from fastapi.middleware.cors import CORSMiddleware
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") 
@@ -736,3 +736,20 @@ def get_project_from_collaboration(
         raise HTTPException(status_code=404, detail="Collaboration or project not found")
     
     return project
+
+@app.get("/collaborations/{collaboration_id}/user")
+def get_user_from_collaboration(
+    collaboration_id: int,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user_from_token)
+):
+    """
+    Get user details associated with a specific collaboration ID.
+    Only accessible to users who are part of the collaboration or project owners.
+    """
+    user = get_user_from_collaboration_id(db, collaboration_id)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Collaboration or user not found")
+    
+    return user
